@@ -1,8 +1,8 @@
 name: dnstwist daily
 on:
+  workflow_dispatch
   schedule:
     - cron: "0 5 * * *"
-  workflow_dispatch
 
 permissions:
   contents: write
@@ -13,20 +13,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Show tree
+        run: |
+          pwd
+          ls -la
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install deps
+      - name: Install dnstwist
         run: |
           python -m pip install --upgrade pip
           pip install dnstwist
 
-      - name: Run script and stage CSV
+      - name: Run get_dnstwist.py
+        run: |
+          python get_dnstwist.py domains_list.txt || python3 get_dnstwist.py domains_list.txt
+          ls -1 *.csv || true
+
+      - name: Stage CSV to data
         run: |
           mkdir -p data
-          python get_dnstwist.py domains_list.txt
           latest=$(ls -1t *.csv | head -n 1)
+          if [ -z "$latest" ]; then
+            echo "No CSV produced. Check previous step logs."
+            exit 1
+          fi
           cp "$latest" data/dnstwist_latest.csv
 
       - name: Commit CSV if changed
