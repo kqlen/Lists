@@ -28,16 +28,17 @@ jobs:
           python get_dnstwist.py domains_list.txt
           ls -1 *.csv
 
-      - name: Stage CSV into DNSTWIST/data
+      - name: Combine CSVs into single file
         run: |
           mkdir -p DNSTWIST/data
-          latest=$(ls -1t DNSTWIST/*.csv | head -n 1)
-          cp "$latest" DNSTWIST/data/dnstwist_latest.avans-nl.csv
+          # take header from first file, then append body from all files skipping their headers
+          awk 'FNR==1 && NR!=1{next} {print}' DNSTWIST/*_dnstwist_list.csv > DNSTWIST/data/dnstwist_all.csv
+          ls -lh DNSTWIST/data/dnstwist_all.csv
 
       - name: Commit CSV if changed
         run: |
           git config user.name "github-actions"
           git config user.email "actions@users.noreply.github.com"
-          git add DNSTWIST/data/dnstwist_latest.avans-nl.csv
-          git diff --cached --quiet || git commit -m "Update dnstwist CSV"
+          git add DNSTWIST/data/dnstwist_all.csv
+          git diff --cached --quiet || git commit -m "Update combined dnstwist CSV"
           git push
